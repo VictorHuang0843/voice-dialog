@@ -119,3 +119,27 @@ export HF_ENDPOINT=https://hf-mirror.com   # 加进 ~/.zshrc 一劳永逸
 ```bash
 VD_MODEL=base uv run voice-dialog listen   # 单次用 base
 ```
+
+## 从 zip 安装（不用 git clone）
+
+下载 zip（或朋友直接发你）→ 解压到想放的地方，比如 `~/tools/` → 打开终端进目录，后面交给 AI：
+
+在 Claude Code（或任何能执行命令的 AI 编程工具）里，把下面这段原样发给它：
+
+```
+帮我安装这个目录里的 voice-dialog 项目：
+1. cd 到这个目录跑 uv run voice-dialog init（没装 uv 就先装：curl -LsSf https://astral.sh/uv/install.sh | sh）
+2. init 全绿后，把打印出来的 claude mcp add 命令执行掉
+3. 最后跑 uv run voice-dialog doctor 给我看结果
+```
+
+它会装好一切并注册到 Claude Code，重启会话即可用。
+
+也可以手动，就两条命令：
+
+```bash
+cd 解压后的目录
+uv run voice-dialog init        # 结束时打印注册命令，复制执行
+```
+
+Mac 上不熟悉终端的话：解压后在文件夹上右键 → 服务 → 新建位于文件夹位置的终端窗口，就到目录了。
