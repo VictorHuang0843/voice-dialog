@@ -1,44 +1,97 @@
-# voice-dialog-mcp — 给任意 Agent 的本地语音对话能力
+# voice-dialog
 
-MCP server + CLI 双形态。纯本地：TTS 走系统原生，ASR 用 faster-whisper（本地推理），端点检测用 webrtcvad（纯信号处理，非模型）。
+**让任何 AI Agent 开口说话、竖耳倾听 —— 100% 本地，零云端依赖。**
 
-## 工具
-- `speak(text)` — 播完即返回（终态播报）
-- `listen(wait_start, silence, max_len)` — VAD 录音 + 本地转写
-- `ask_by_voice(text, wait_start=30, silence=5)` — 原子单回合：说一句听一次，**绝不自动续听**（防死循环）
-- `doctor` — 环境体检（ffmpeg/麦克风/TTS/模型/1秒实录探针）
+一个 MCP server + CLI 双形态的语音对话工具。Agent 跑完任务语音播报、需要决策时语音提问、听你口述指令——识别用本地 whisper，合成用系统 TTS，端点检测用纯信号处理，你的语音数据不出电脑。
 
-## 交互时序（用户听到的）
-高音"叮"= 开录 → 说话 → 静默 5 秒 → 下行双音 = 正常结束（急促三连音 = 60 秒硬顶截断）
+## 它能做什么
 
-## 接入
-```json
-{ "mcpServers": { "voice-dialog": {
-  "command": "uv", "args": ["--project", "/Users/victor/Documents/work/AI/2026-08-21--voice-dialog-mcp", "run", "voice-dialog", "serve"] } } }
 ```
-CLI：`voice-dialog speak "…" | listen | ask "…" | doctor | serve`
+你（不看屏幕）："搞定了吗？"
+Agent：🔊 "代码写完了，测试全绿。要提交吗？"     ← speak / ask_by_voice
+你（在忙别的事）："先不提交，我看看再说"            ← 本地 whisper 听懂了
+Agent：🔊 "好，代码留在工作区等你。"
+```
 
-## 设计要点
-- 语言 auto 检测（whisper ~100 语言），`VD_LANG` 可钉死；中文 TTS 文本走 UTF-8 文件规避 Win PS5.1 GBK 坑
-- 模型缺失首次自动下载，HF_ENDPOINT→hf-mirror.com 回退（中国网络）
-- 平台差异全部收敛在 platform.py（macOS say / Win SAPI / Linux espeak；ffmpeg 兜底录音）
-- mcp 钉在 >=1.17,<2.0（2.0 删了装饰器 API）
-- webrtcvad 需要 setuptools<82（pkg_resources）
-- 本机注意：默认输入是 BlackHole 2ch（回环设备）时必须显式选物理麦克风，设备 1 = MacBook Air麦克风
+| 工具 | 用途 |
+|---|---|
+| `speak` | 单向播报（任务完成、里程碑） |
+| `listen` | 录音+识别（你口述指令） |
+| `ask_by_voice` | 原子问答：说一句→听一次，绝不自动续听（防死循环） |
+| `init` | 一键初始化（见下） |
+| `doctor` | 环境体检（只查不装） |
 
-## 验证记录（2026-08-21）
-- doctor：全部 ok（ffmpeg/麦克风×2/say/模型缓存/实录探针）
-- speak：say 中文发声正常
-- listen：录音→VAD→whisper 全链路通（无人说话返回 no_speech/空文本）
-- MCP：stdio 握手 + tools/list + tools/call(doctor) 实测通过
-- Claude Code：user 级已注册（voice-dialog），Skill 装在 ~/.claude/skills/hcn-voice-dialog/
+## 快速开始
 
-## 验收记录（2026-08-21，主人真机参与）
-- 真人语音识别：全对（"晚饭想吃米饭"“明天是周五"，含长句复杂反馈均准确转写）
-- 完整 ask 闭环：提问→叮→回答→5秒静默→咚咚→转写返回 ✓
-- 提示音可听性确认：主人听到两组提示音 ✓
+```bash
+git clone https://github.com/VictorHuang0843/voice-dialog.git
+cd voice-dialog
 
-## 调试中修掉的 3 个真坑（开源后别人也会踩）
-1. **ffplay 不跟随系统默认输出设备**：ffmpeg 的 ffplay 在 macOS 上自己挑 core-audio 设备（选中 BlackHole 回环），rc=0 但用户听不到。修法：ffmpeg 渲染 wav → afplay/powershell SoundPlayer 播放（跟随系统输出）
-2. **macOS 中文声音选择**：`say -v ?` 里 zh_CN 按字母序 Eddy/Flo/Grandma 排前面，都是劣质音色且部分静默失败；必须优先 Tingting/Meijia/Sinji
-3. **faster-whisper confidence 恒 0**：原实现误把"段时长均值/总时长"当置信度；改为 speech coverage（语音覆盖率），>0.25 才算正常
+# 没装 uv？先来这个（Windows 用 install.ps1）：
+#   curl -LsSf https://astral.sh/uv/install.sh | sh
+
+uv run voice-dialog init
+```
+
+`init` 是 7 步全自动引导：装 uv → 装依赖（uv 连 Python 都帮你装好）→ 下载 whisper 模型（464MB，中国网络自动走 hf-mirror）→ 麦克风权限实测 → TTS 出声实测 → 打印 MCP 注册命令。哪步失败就给哪步的修复命令，修好重跑即可。
+
+试一句：
+
+```bash
+uv run voice-dialog speak "语音系统就绪" --lang zh
+uv run voice-dialog ask "请说话" --wait-start 60
+# 你会听到：高亮上扬"叮↑"= 开始说话 → 停 3 秒 → 低沉"咚…咚↓"= 录音结束
+```
+
+## 接入你的 Agent
+
+**任何 MCP 客户端**（Claude Code、Codex、Cursor、LoopX……）：
+
+```json
+{
+  "mcpServers": {
+    "voice-dialog": {
+      "command": "uv",
+      "args": ["--project", "/你的路径/voice-dialog", "run", "voice-dialog", "serve"]
+    }
+  }
+}
+```
+
+**Claude Code 一行注册：**
+
+```bash
+claude mcp add voice-dialog -s user -- uv --project /你的路径/voice-dialog run voice-dialog serve
+```
+
+**不支持 MCP 的工具**：直接调 CLI，`uv run voice-dialog speak/listen/ask "..."`。
+
+**Claude Code Skill**（可选，教 Agent 何时说/何时听）：把 `skills/voice-dialog/` 拷到 `~/.claude/skills/`。
+
+## 支持的平台
+
+| | macOS | Windows | Linux |
+|---|---|---|---|
+| 语音识别 | ✅ 已验收 | ✅ | ✅ |
+| 语音合成 | ✅ 系统TTS | ✅ SAPI | ⚠️ 需装 espeak-ng |
+| 提示音 | ✅ | ✅ | ✅ 需 ffmpeg |
+
+语言自动检测（whisper 支持 ~100 种语言），`VD_LANG=zh` 可钉死；模型大小 `VD_MODEL=small` 可调。
+
+## 常见问题
+
+| 症状 | 解法 |
+|---|---|
+| init 报 uv 未装 | 跑上面 curl 安装命令，装完重开终端 |
+| 麦克风探针失败 | macOS：系统设置→隐私与安全性→麦克风→勾选你的终端；Windows：设置→隐私→麦克风 |
+| 模型下载失败/超慢 | `export HF_ENDPOINT=https://hf-mirror.com` 后重跑 |
+| TTS 无声 | 检查系统输出设备是否被虚拟声卡（BlackHole 等）劫持 |
+| 改了代码不生效 | MCP server 是常驻进程：`pkill -f "voice-dialog serve"` |
+
+## 隐私
+
+语音在本地识别（faster-whisper），文本用系统 TTS 播放，不调用任何云端 API，不上传任何音频。
+
+## License
+
+MIT
