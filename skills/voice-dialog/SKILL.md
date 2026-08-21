@@ -1,5 +1,5 @@
 ---
-name: hcn-voice-dialog
+name: voice-dialog
 description: Voice dialog with the user over local TTS + ASR (no cloud). Use when the user is away from the screen, at task completion, when a decision/input/approval is needed, or when the user asks to talk by voice. Tools come from the voice-dialog-mcp server (speak / listen / ask_by_voice / doctor); CLI fallback is `uv run voice-dialog <cmd>` from the voice-dialog project root.
 ---
 
