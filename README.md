@@ -95,3 +95,27 @@ claude mcp add voice-dialog -s user -- uv --project /你的路径/voice-dialog r
 ## License
 
 MIT
+
+## 模型说明
+
+**默认下载什么？** whisper **small**（int8 量化，约 464MB），中英文识别效果和速度的平衡点。首次 `listen`/`init` 时自动下载，之后缓存在本地（macOS/Linux：`~/.cache/huggingface/hub/`，Windows：`%USERPROFILE%\.cache\huggingface\hub\`），永不再下。
+
+**下载源怎么选？** 代码里不写死下载逻辑——`WhisperModel("small", ...)` 构造时由 faster-whisper 库自动从 HuggingFace 下载。默认走官方源 huggingface.co；官方源连不上时代码自动切国内镜像 hf-mirror.com 重试（通过设置 `HF_ENDPOINT` 环境变量实现）。国内用户也可以提前手动钉死：
+
+```bash
+export HF_ENDPOINT=https://hf-mirror.com   # 加进 ~/.zshrc 一劳永逸
+```
+
+**换更大的模型？** 环境变量 `VD_MODEL` 控制，重跑生效：
+
+| VD_MODEL | 大小 | 特点 |
+|---|---|---|
+| `tiny` | ~75MB | 最快，精度一般 |
+| `base` | ~142MB | 快，日常够用 |
+| `small`（默认） | ~464MB | 平衡，推荐 |
+| `medium` | ~1.5GB | 更准，M 芯片秒级转写变十秒级 |
+| `large-v3` | ~3GB | 最准最慢，短对话不建议 |
+
+```bash
+VD_MODEL=base uv run voice-dialog listen   # 单次用 base
+```
