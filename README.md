@@ -1,16 +1,14 @@
 # voice-dialog
 
-**让任何 AI Agent 开口说话、竖耳倾听 —— 100% 本地，零云端依赖。**
-
-一个 MCP server + CLI 双形态的语音对话工具。Agent 跑完任务语音播报、需要决策时语音提问、听你口述指令——识别用本地 whisper，合成用系统 TTS，端点检测用纯信号处理，你的语音数据不出电脑。
+给 AI Agent 加语音对话能力的 MCP server，也能当命令行工具用。Agent 干完活可以说话告诉你，也能开口问你、听你回答。识别跑在本地的 whisper 上，合成用系统自带的 TTS，全程不联网、不传音频。
 
 ## 它能做什么
 
 ```
-你（不看屏幕）："搞定了吗？"
-Agent：🔊 "代码写完了，测试全绿。要提交吗？"     ← speak / ask_by_voice
-你（在忙别的事）："先不提交，我看看再说"            ← 本地 whisper 听懂了
-Agent：🔊 "好，代码留在工作区等你。"
+你（没看屏幕）："搞定了吗？"
+Agent（出声）："代码写完了，测试全过。要提交吗？"      ← ask_by_voice
+你："先不提交，我看看再说"                             ← listen 收到，本地转写
+Agent（出声）："好，先留着。"                          ← speak
 ```
 
 | 工具 | 用途 |
@@ -72,9 +70,9 @@ claude mcp add voice-dialog -s user -- uv --project /你的路径/voice-dialog r
 
 | | macOS | Windows | Linux |
 |---|---|---|---|
-| 语音识别 | ✅ 已验收 | ✅ | ✅ |
-| 语音合成 | ✅ 系统TTS | ✅ SAPI | ⚠️ 需装 espeak-ng |
-| 提示音 | ✅ | ✅ | ✅ 需 ffmpeg |
+| 语音识别 | 实测通过 | 可用 | 可用 |
+| 语音合成 | 系统TTS | SAPI | 需装 espeak-ng |
+| 提示音 | 可用 | 可用 | 需 ffmpeg |
 
 语言自动检测（whisper 支持 ~100 种语言），`VD_LANG=zh` 可钉死；模型大小 `VD_MODEL=small` 可调。
 
