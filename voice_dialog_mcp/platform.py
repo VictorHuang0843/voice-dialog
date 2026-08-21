@@ -179,11 +179,13 @@ def beep(kind: str) -> None:
     """
     ff = ffmpeg_path()
     specs = {
-        # (freq, duration, count) — rising pair = start, falling pair = end,
-        # triple = truncated (user can hear the difference blind).
-        "start": [(880, 0.12), (1320, 0.12)],
-        "end": [(990, 0.12), (660, 0.16)],
-        "trunc": [(740, 0.10), (740, 0.10), (740, 0.10)],
+        # User-tested design: start/end must be unmistakably different.
+        # start = bright rising chime (high freq, short)  "叮↑"
+        # end   = low descending pair (bass, longer)      "咚…咚↓"
+        # trunc = urgent high triple
+        "start": [(1175, 0.10), (1568, 0.14)],
+        "end": [(392, 0.15), (262, 0.25)],
+        "trunc": [(880, 0.09), (880, 0.09), (880, 0.09)],
     }
     tones = specs.get(kind, specs["start"])
     if not ff:

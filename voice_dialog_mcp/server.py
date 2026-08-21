@@ -15,6 +15,7 @@ import sys
 from . import platform as P
 from .asr import transcribe
 from .doctor import run as doctor_run
+from .init import run as init_run
 from .recorder import record_with_vad
 
 
@@ -136,6 +137,21 @@ def serve() -> None:
                 },
             ),
             Tool(
+                name="init",
+                description=(
+                    "Guided bootstrap for first use: installs uv (macOS auto), "
+                    "python deps via uv sync, pre-downloads the whisper model, "
+                    "probes mic permission and TTS with a real test. Run this "
+                    "when voice tools fail on a fresh machine; safe to re-run."
+                ),
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "skip_model": {"type": "boolean", "default": False},
+                    },
+                },
+            ),
+            Tool(
                 name="doctor",
                 description=(
                     "Check environment health: ffmpeg, microphones, TTS engine, "
@@ -168,6 +184,8 @@ def serve() -> None:
                     lang=arguments.get("lang"),
                     volume=arguments.get("volume", 0),
                 )
+            elif name == "init":
+                result = init_run(skip_model=arguments.get("skip_model", False))
             elif name == "doctor":
                 result = doctor_run(probe_mic=True)
             else:
@@ -211,6 +229,9 @@ def cli() -> None:
     a.add_argument("--volume", type=int, default=0)
 
     sub.add_parser("doctor", help="environment health check")
+
+    i = sub.add_parser("init", help="guided bootstrap: uv/ffmpeg/deps/model/mic/tts")
+    i.add_argument("--skip-model", action="store_true", help="skip whisper pre-download")
     sub.add_parser("serve", help="run as MCP stdio server")
 
     ns = ap.parse_args()
@@ -227,6 +248,8 @@ def cli() -> None:
                          ensure_ascii=False))
     elif ns.cmd == "doctor":
         print(json.dumps(doctor_run(probe_mic=True), ensure_ascii=False, indent=2))
+    elif ns.cmd == "init":
+        init_run(skip_model=ns.skip_model)
 
 
 if __name__ == "__main__":
